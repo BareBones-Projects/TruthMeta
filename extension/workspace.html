@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>MetaTruth Workspace</title><link rel="stylesheet" href="theme.css"><style>
+body{margin:0}.mt-workspace{display:grid;grid-template-columns:240px 1fr;min-height:100vh}.mt-sidebar{padding:16px;border-right:1px solid #21465d;background:#050e18}.mt-sidebar button{width:100%;text-align:left;margin:4px 0}.mt-content{padding:18px}.mt-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}.mt-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.mt-card2{background:#0b2031;border:1px solid #21465d;border-radius:12px;padding:14px}
+</style></head><body>
+<div class="mt-workspace">
+<aside class="mt-sidebar">
+<div style="margin-bottom:14px"><b style="color:#19e7ff">MetaTruth</b><div class="muted">v0.10.0-alpha</div></div>
+<button class="action primary" id="capturePage">📸 Capture Current Page</button>
+<button class="action" id="openPortal">🌐 Admin Portal</button>
+</aside>
+<main class="mt-content">
+<div class="mt-toolbar"><div><b>BONES × REMEDY</b><div class="muted" id="connectionState">Checking portal...</div></div></div>
+<div class="mt-grid">
+<div class="mt-card2"><h2>Case Summary</h2><div id="caseSummary" class="muted">Select a case.</div></div>
+<div class="mt-card2"><h2>Quick Actions</h2><button class="action primary" id="newCase">New Case</button></div>
+</div>
+</main></div>
+<script src="workspace.js"></script>
+</body></html>

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "MetaTruth \u2014 Bones & Remedy",
+  "version": "0.10.0",
+  "description": "MetaTruth v0.10.0-alpha \u2014 SQLite portal, case timeline, appeals/report lifecycle.",
+  "permissions": [
+    "activeTab",
+    "clipboardWrite",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "MetaTruth",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "admin.html"
+}
