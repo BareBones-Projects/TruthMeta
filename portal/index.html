@@ -1,0 +1,13 @@
+<!doctype html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MetaTruth Portal</title><link rel="stylesheet" href="portal.css"></head><body>
+<div id="loginView" class="auth-shell"><form class="auth-card" id="loginForm"><h1>MetaTruth</h1><p class="muted">Bones investigates. Remedy reviews.</p><label>Email</label><label
+        for="loginEmail"></label><input id="loginEmail" value="admin@metatruth.local"><label>Password</label><label
+        for="loginPassword"></label><input id="loginPassword" type="password" value="ChangeMe!123"><button>Sign In</button><div id="loginError" class="error"></div></form></div>
+<div id="appView" class="portal-shell" hidden><aside class="portal-nav"><div class="brand">METATRUTH<div class="muted" id="roleLabel"></div></div>
+    <button data-tab="dashboard" class="is-active">▣ Dashboard</button><button data-tab="cases">🕵 Cases</button><button data-tab="users">👥 Users</button><button id="logoutBtn">Sign Out</button></aside>
+    <main class="portal-main"><header><div><h1 id="tabTitle">Dashboard</h1><div class="muted">Portal-authoritative case system</div></div><div id="healthBadge">●</div></header>
+        <section class="tab is-active" id="tab-dashboard"><div class="metrics" id="metrics"></div><div class="card"><h2>Recent Cases</h2><div id="recentCases"></div></div></section>
+        <section class="tab" id="tab-cases"><div class="card"><div class="bar"><h2>Cases</h2><button id="newCaseBtn">New Case</button></div><div id="casesTable"></div></div></section>
+        <section class="tab" id="tab-users"><div class="card"><div class="bar"><h2>Users & Roles</h2><button id="newUserBtn">Add User</button></div><div id="usersTable"></div></div></section>
+    </main></div>
+<div id="portalModal" class="modal-backdrop"><div class="modal-card"><h2 id="modalTitle"></h2><div id="modalBody"></div><div class="actions"><button id="modalCancel">Cancel</button><button id="modalSubmit">Save</button></div></div></div>
+<script src="portal.js"></script></body>
