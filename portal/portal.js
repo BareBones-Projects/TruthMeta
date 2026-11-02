@@ -30,7 +30,9 @@ async function render(){
  const health=await api("/api/health");$("#healthBadge").innerHTML=`<span class=good>● ONLINE ${E(health.version)}</span>`;
  const cases=await api("/api/cases");
  let users=[];try{users=await api("/api/users")}catch{}
- 
+
+  // Replace the existing $("#reportsTable").innerHTML line in render()
+ $("#reportsTable").innerHTML=reports.map(r=>`<div class=row><b>${E(r.case_id||r.id)}</b><span class=tag>${E(r.status)}</span><div class=muted>${E(r.created_at)} • ${E(r.recipient||"No recipient")}</div><div class=muted>Delivery: ${E(r.delivery_channel||"portal")}</div></div>`).join("")||"<div class=muted>No reports.</div>";
  $("#metrics").innerHTML=[["Cases",cases.length],["Users",users.length]].map(([n,v])=>`<div class=metric><div>${n}</div><b>${v}</b></div>`).join("");
  $("#recentCases").innerHTML=cases.slice(0,8).map(c=>rowCase(c)).join("")||"<div class=muted>No cases.</div>";
  $("#casesTable").innerHTML=cases.map(c=>rowCase(c)).join("")||"<div class=muted>No cases.</div>";
