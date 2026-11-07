@@ -1,3 +1,5 @@
+<img width="1280" height="640" alt="TruthMeta-social-preview" src="https://github.com/user-attachments/assets/4aec8f81-44d3-48da-b9ca-468328880578" />
+
 # MetaTruth — Bones & Remedy
 **Version:** 0.10.0-alpha  
 **Codename:** The Internet's Tiniest Courtroom  
