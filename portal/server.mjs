@@ -6,27 +6,37 @@ import {fileURLToPath} from "node:url";
 import {db} from "./db.mjs";
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url)),publicDir=__dirname,port=Number(process.env.PORT||8787),bind=process.env.BIND||"127.0.0.1";
-const email=process.env.METATRUTH_ADMIN_EMAIL||"admin@metatruth.local",pass=process.env.METATRUTH_ADMIN_PASSWORD||"ChangeMe!123";
+const email=process.env.METATRUTH_ADMIN_EMAIL||"admin@metatruth.local";
+const pass=process.env.METATRUTH_ADMIN_PASSWORD;
+const permittedOrigins=new Set((process.env.METATRUTH_ALLOWED_ORIGINS||"").split(",").map(x=>x.trim()).filter(Boolean));
+if(permittedOrigins.has("*"))throw new Error("Wildcard CORS origins are forbidden");
 const roles={viewer:1,reporter:2,auditor:2,investigator:3,judge:4,admin:5,owner:6};
 const id=p=>`${p}_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`;
 const pw=p=>crypto.scryptSync(String(p),"metatruth-v010",64).toString("hex");
 const sha=s=>crypto.createHash("sha256").update(String(s)).digest("hex");
 const now=()=>new Date().toISOString();
-const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"Content-Type, Authorization","Access-Control-Allow-Methods":"GET,POST,PATCH,DELETE,OPTIONS"};
+const cors={"Access-Control-Allow-Headers":"Content-Type, Authorization","Access-Control-Allow-Methods":"GET,POST,PATCH,DELETE,OPTIONS"};
+const corsFor=q=>q?.headers?.origin&&permittedOrigins.has(q.headers.origin)?{...cors,"Access-Control-Allow-Origin":q.headers.origin,"Vary":"Origin"}:{};
 
-function send(r,s,b,t="application/json; charset=utf-8"){r.writeHead(s,{...cors,"Content-Type":t});r.end(typeof b==="string"?b:JSON.stringify(b))}
-function body(q){return new Promise((a,b)=>{let d="";q.on("data",c=>d+=c);q.on("end",()=>{try{a(d?JSON.parse(d):{})}catch(e){b(e)}});q.on("error",b)})}
+function send(r,s,b,t="application/json; charset=utf-8"){r.writeHead(s,{...corsFor(r.req),"Content-Type":t,"X-Content-Type-Options":"nosniff","Cache-Control":"no-store"});r.end(typeof b==="string"?b:JSON.stringify(b))}
+function body(q){return new Promise((a,b)=>{let d="",size=0,done=false;q.on("data",c=>{size+=Buffer.byteLength(c);if(size>1_048_576&&!done){done=true;b(Object.assign(new Error("payload_too_large"),{status:413}));q.destroy();return;}if(!done)d+=c;});q.on("end",()=>{if(done)return;try{a(d?JSON.parse(d):{})}catch(e){b(Object.assign(new Error("invalid_json"),{status:400}))}});q.on("error",b)})}
 function can(u,r){return u&&roles[u.role]>=roles[r]}
 function audit(action,u,payload={}){const p=db.prepare("SELECT hash FROM audit ORDER BY rowid DESC LIMIT 1").get(),ts=now(),h=sha(JSON.stringify({action,userId:u?.id||null,payload,ts,previousHash:p?.hash||null}));db.prepare("INSERT INTO audit VALUES(?,?,?,?,?,?,?)").run(id("aud"),ts,action,u?.id||null,JSON.stringify(payload),p?.hash||null,h)}
 function pub(u){return u&&{id:u.id,email:u.email,role:u.role,name:u.name,active:!!u.active,createdAt:u.created_at}}
 function token(u){const raw=crypto.randomBytes(32).toString("base64url"),exp=new Date(Date.now()+8*3600000).toISOString();db.prepare("INSERT INTO sessions VALUES(?,?,?,?,?,?)").run(id("ses"),u.id,sha(raw),exp,null,now());return{token:raw,expiresAt:exp}}
 function auth(q){const h=q.headers.authorization||"";if(!h.startsWith("Bearer "))return null;const s=db.prepare("SELECT * FROM sessions WHERE token_hash=? AND revoked_at IS NULL AND expires_at>?").get(sha(h.slice(7)),now());return s?pub(db.prepare("SELECT * FROM users WHERE id=? AND active=1").get(s.user_id)):null}
 
-if(!db.prepare("SELECT id FROM users LIMIT 1").get())db.prepare("INSERT INTO users VALUES(?,?,?,?,?,?,?)").run(id("usr"),email,pw(pass),"owner","MetaTruth Owner",1,now());
+if(!db.prepare("SELECT id FROM users LIMIT 1").get()){
+  if(!pass||pass.length<16)throw new Error("Set METATRUTH_ADMIN_PASSWORD to a unique secret of at least 16 characters before first run");
+  db.prepare("INSERT INTO users VALUES(?,?,?,?,?,?,?)").run(id("usr"),email,pw(pass),"owner","MetaTruth Owner",1,now());
+}
 
 const mime={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".json":"application/json; charset=utf-8"};
 
 http.createServer(async(q,r)=>{
+ try {
+  const incomingOrigin=q.headers.origin;
+  if(incomingOrigin&&!permittedOrigins.has(incomingOrigin))return send(r,403,{error:"origin_forbidden"});
   if(q.method==="OPTIONS")return send(r,204,"","text/plain");
   const u=new URL(q.url,`http://${q.headers.host||"localhost"}`);
   if(u.pathname==="/api/health")return send(r,200,{ok:true,version:"0.10.0-alpha",database:"sqlite"});
@@ -69,7 +79,8 @@ http.createServer(async(q,r)=>{
   }
 
   let rel=u.pathname==="/"?"index.html":u.pathname.replace(/^\/+/,""),file=path.normalize(path.join(publicDir,rel));
-  if(!file.startsWith(publicDir))return send(r,403,{error:"forbidden"});
+  if(!file.startsWith(publicDir+path.sep))return send(r,403,{error:"forbidden"});
   if(!fs.existsSync(file)||fs.statSync(file).isDirectory())return send(r,404,{error:"not_found"});
-  r.writeHead(200,{...cors,"Content-Type":mime[path.extname(file).toLowerCase()]||"application/octet-stream"});fs.createReadStream(file).pipe(r)
+  r.writeHead(200,{...corsFor(q),"Content-Type":mime[path.extname(file).toLowerCase()]||"application/octet-stream","X-Content-Type-Options":"nosniff"});fs.createReadStream(file).pipe(r)
+ } catch(e) { if(!r.headersSent)send(r,e.status||400,{error:e.message||"invalid_request"});else r.end(); }
 }).listen(port,bind,()=>console.log(`MetaTruth v0.10.0-alpha http://${bind}:${port}`));
