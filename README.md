@@ -1,51 +1,77 @@
 ![TruthMeta social preview](assets/social-preview.svg)
 
-<img width="1280" height="640" alt="TruthMeta-social-preview" src="https://github.com/user-attachments/assets/4aec8f81-44d3-48da-b9ca-468328880578" />
+# // TruthMeta · Bones & Remedy
 
-# MetaTruth — Bones & Remedy
-**Version:** 0.10.0-alpha  
-**Codename:** The Internet's Tiniest Courtroom  
-**Status:** Staging Ready / Manual Review Required
+**Version:** 0.10.0-alpha (Chrome extension + loopback SQLite portal)  
+**Release status:** Security hardening in review. **Not approved for public hosting.**
+
+TruthMeta is a human-reviewed evidence capture and case tracking prototype. The extension provides a deliberate page-capture workflow. The local portal handles case, evidence, user and audit records. **An automatic claim-verification or immutable forensic chain is not established by the current source.** Evidence and findings require human review.
+
+## Requirements and first run
+
+- Node.js 22 or newer (the portal uses Node's `node:sqlite` module).
+- Chromium-based browser with extensions enabled.
+- Local loopback access. Do not bind the portal to an external interface before a security review.
+
+```sh
+cp .env.example .env
+# Edit .env: supply a UNIQUE METATRUTH_ADMIN_PASSWORD, 16+ characters.
+node --env-file=.env portal/server.mjs
+```
+
+Open http://127.0.0.1:8787 and sign in using the configured admin email/password. The portal will **refuse first-run account initialization** if the password is absent or shorter than 16 characters. Existing local users remain in your local database.
+
+## Extension setup
+
+1. Open Chrome/Chromium > Extensions > Developer mode > Load unpacked.
+2. Select the tracked `extension/` directory.
+3. Find the installed extension ID in the extensions page.
+4. Set `METATRUTH_ALLOWED_ORIGINS=chrome-extension://<your-extension-id>` in the server environment, then restart the portal.
+5. Configure the portal URL `http://127.0.0.1:8787` in the extension. Use the in-app capture and review workflow with non-sensitive test data first.
+
+By default, API cross-origin requests are rejected unless their **exact origin** is configured. Wildcard CORS is forbidden. Loading local HTML in a browser does not authorize every origin to access the portal.
+
+## Architecture
+
+| Path | Purpose |
+|---|---|
+| `extension/manifest.json` | Chromium Manifest V3 and requested permissions |
+| `extension/service-worker.js` | Extension background actions |
+| `extension/portal-api.js` | Portal client transport |
+| `portal/server.mjs` | Local HTTP API, session checks and static portal assets |
+| `portal/db.mjs` | SQLite schema and WAL-mode local persistence |
+| `test_release.py` | Manifest and static extension checks |
+| `portal/security.test.mjs` | Origin, login and authorization smoke tests |
+
+## Development checks
+
+```sh
+python3 test_release.py
+node --check portal/server.mjs
+node --test portal/security.test.mjs
+```
+
+See [security remediation](docs/SECURITY_REMEDIATION_2026_11_13.md). SQLite files under `portal/data/` are **runtime state**, not source. Journal files previously committed have been removed on a review branch, but historical Git objects require a separate data-exposure assessment.
+
+## Known security and functional limitations
+
+- Server-side authorization requires a complete audit on every route; the included tests cover representative login/origin paths, not a comprehensive penetration test.
+- Authentication uses a prototype password-hash function and should migrate to unique per-user salts with a modern password KDF.
+- CORS checks reduce browser access but do **not** replace tokens, CSRF defenses, request throttling, database backups or operating-system permissions.
+- The audit hash chain is application-controlled and not an independently immutable ledger.
+- The extension currently requests broad URL access. Review and minimize it before distribution.
+- No production-hosting, backup/restore, incident response or public deployment certification has been completed.
+
+## Alpha release gate
+
+- [ ] All CI checks pass and installation tests cover the target Chromium version.
+- [ ] Server-side RBAC, input-validation, timeout, rate-limiting and audit integrity tests pass.
+- [ ] User data, database histories and packaged artifacts contain no private test records.
+- [ ] Extension permissions and provenance workflows reviewed.
+- [ ] Signed or checksummed release archive, documented rollback and human review completed.
+
+Do not promote this application beyond a **local test alpha** until these gates are satisfied.
 
 ---
 
-## 1. System Overview
-MetaTruth is a localized investigative evidence pipeline. It allows a user (Bones) to capture explicit web page snapshots, hash them, and submit them to a human reviewer (Remedy) via a secure local portal. 
-
-The system is designed around **Zero Trust** and **Human-in-the-Loop** principles:
-*   **No Auto-Guilt:** The system never assumes a claim is true or false; it only documents evidence.
-*   **Explicit Capture:** The extension does not scrape background data. A user must manually click "Capture" on an active tab.
-*   **Audit Chain:** Every action (case creation, evidence capture, judge review) is cryptographically hashed and appended to an unalterable audit log.
-
----
-
-## 2. Quick Start Guide
-
-### A. Start the Admin Portal
-1. Ensure Node.js (v18+) is installed.
-2. Open a terminal and run:
-   ```bash
-   cd portal
-   node server.mjs
-
----
-
-## // Alpha readiness · 2026-10-31
-
-This repository is undergoing pre-alpha verification. The presence of source files, illustrative screenshots, or release notes is **not** evidence that every platform build, deployment, security property, or runtime feature has passed testing.
-
-See [the repository-specific alpha audit](docs/ALPHA_READINESS_AUDIT.md) for verified source-inventory findings, unresolved gaps, suggested pull requests, testing requirements, packaging criteria, and related project conversation topics. Review the checked-in implementation and passing test results before promoting the current work to an alpha release.
-
-**Contribution workflow:** work on review branches, attach test evidence and sample artifacts to pull requests, and merge only after acceptance. Avoid committing credentials, transient databases, real personal information, or generated caches.
-
----
-
-## // Alpha readiness · 2026-10-31
-
-Current documentation and source are **not proof of production or cross-platform release readiness**. See [the repository-specific alpha audit](docs/ALPHA_READINESS_AUDIT.md) for known gaps, priority work, test gates, package validation and related project context. All build, packaging, privacy and security claims must be verified with actual tests before tagging an alpha release.
-
-Contribute through review branches and PRs; attach reproducible commands, CI results, screenshots and artifact checksums where applicable. Never commit credentials, personal records, generated caches or transient database files.
-
-
----
 BareBones Projects, Designed by: Justin Levesque-Welsch
