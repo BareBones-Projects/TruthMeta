@@ -1,0 +1,20 @@
+name: TruthMeta portal security integration
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  portal:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['22','24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --check portal/server.mjs
+      - run: node --test portal/security.test.mjs
